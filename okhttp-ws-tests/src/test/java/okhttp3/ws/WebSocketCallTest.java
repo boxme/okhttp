@@ -31,6 +31,9 @@ import okhttp3.internal.tls.SslClient;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okio.Buffer;
+import okio.BufferedSink;
+import okio.GzipSink;
+import okio.Okio;
 import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
@@ -175,6 +178,14 @@ public final class WebSocketCallTest {
         "Expected 'Sec-WebSocket-Accept' header value 'ujmZX4KXZqjwy6vi1aQFH5p4Ygk=' but was 'magic'");
   }
 
+  @Test public void nullBody() throws IOException {
+    server.enqueue(new MockResponse()
+        .setResponseCode(101)
+        .addHeader("Content-Encoding", "gzip")
+        .setBody(gzip("")));
+    awaitWebSocket();
+  }
+
   @Test public void wsScheme() throws IOException {
     websocketScheme("ws");
   }
@@ -262,6 +273,15 @@ public final class WebSocketCallTest {
     }
 
     return webSocketRef.get();
+  }
+
+  /** Returns a gzipped copy of {@code bytes}. */
+  private Buffer gzip(String data) throws IOException {
+    Buffer result = new Buffer();
+    BufferedSink sink = Okio.buffer(new GzipSink(result));
+    sink.writeUtf8(data);
+    sink.close();
+    return result;
   }
 
   private static class EmptyWebSocketListener implements WebSocketListener {
